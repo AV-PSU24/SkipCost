@@ -3,20 +3,25 @@ import SwiftUI
 @main
 struct TuitionClassMotivatorApp: App {
     @StateObject private var notifier = NotificationTimer()
-
+    @State private var hasCompletedOnboarding = false
     let classSchedule = [
-        ("STAT 200 – Statistics", "Oct 26, 2025, 12:39 AM"),
-        ("PSYCH 100 – Intro to Psych", "Oct 26, 2025, 12:40 AM"),
-        ("CMPSC 311 – Systems Programming", "Oct 26, 2025, 12:41 AM")
+        ("STAT 200 – Statistics","$24", "3:32 AM"),
+        ("PSYCH 100 – Intro to Psych","$158", "3:19 AM"),
+        ("CMPSC 311 – Systems Programming","$78", "3:26 AM")
     ]
     
     var body: some Scene {
         WindowGroup {
-            MainToggleView()
-                .environmentObject(notifier)
-                .onAppear {
-                    notifier.startTimer(with: classSchedule) // 🔁 starts checking every 5 minutes
-                }
+            if hasCompletedOnboarding {
+                MainToggleView()
+                    .environmentObject(notifier)
+                    .onAppear {
+                        notifier.startTimer(with: classSchedule)
+                    }
+            }
+            else {
+                IntroFrames(isCompleted: $hasCompletedOnboarding)
+            }
         }
     }
 }

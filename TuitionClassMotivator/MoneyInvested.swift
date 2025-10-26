@@ -13,10 +13,7 @@ struct MoneyInvested: View {
     let totalTuition = 6000.0
     let investedAmount = 2800.0
     var curSemester = "Fall Semester 2025"
-    let attendedClasses = [
-        ("CMPSC 311 – Software Engineering", "+$28", "Today, 10:00 AM"),
-        ("ECON 104 – Macroeconomics", "+$22", "Today, 2:00 PM")
-    ]
+    @ObservedObject var classData = ClassStackShare.shared
     
     var body: some View {
         ScrollView {
@@ -67,14 +64,14 @@ struct MoneyInvested: View {
                         Text("Class Attendance")
                             .font(.headline)
                         Spacer()
-                        Text("\(attendedClasses.count) attended")
+                        Text("\(classData.attendedClasses.count)  attended")
                             .font(.subheadline)
                             .foregroundColor(.green)
                     }
                     .opacity(animateStep >= 1 ? 1 : 0)
                     .animation(.easeInOut(duration: 0.3).delay(0.5), value: animateStep)
                     
-                    ForEach(Array(attendedClasses.enumerated()), id: \.offset) { index, cls in
+                    ForEach(Array(classData.attendedClasses.enumerated()), id: \.offset) { index, cls in
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(cls.0)

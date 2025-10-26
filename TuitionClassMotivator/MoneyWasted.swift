@@ -13,15 +13,7 @@ struct MoneyWasted: View {
     let totalTuition = 6000.0
     let wastedAmount = 2000.0
     var curSemester = "Fall Semester 2025"
-    let missedClasses = [
-        ("STAT 200 – Statistics", "-$24", "Nov 18, 9:00 AM"),
-        ("PSYCH 100 – Intro to Psych", "-$30", "Nov 20, 11:00 AM"),
-        ("PSYCH 100 – Intro to Psych", "-$30", "Nov 20, 11:00 AM"),
-        ("PSYCH 100 – Intro to Psych", "-$30", "Nov 20, 11:00 AM"),
-        ("PSYCH 100 – Intro to Psych", "-$30", "Nov 20, 11:00 AM"),
-        ("PSYCH 100 – Intro to Psych", "-$30", "Nov 20, 11:00 AM"),
-        ("PSYCH 100 – Intro to Psych", "-$30", "Nov 20, 11:00 AM")
-    ]
+    @ObservedObject var classData = ClassStackShare.shared
     
     var body: some View {
         ScrollView {
@@ -71,14 +63,14 @@ struct MoneyWasted: View {
                         Text("Missed Classes")
                             .font(.headline)
                         Spacer()
-                        Text("\(missedClasses.count) absences")
+                        Text("\(classData.missedClasses.count) absences")
                             .font(.subheadline)
                             .foregroundColor(.red)
                     }
                     .opacity(animateStep >= 1 ? 1 : 0)
                     .animation(.easeInOut(duration: 0.3).delay(0.5), value: animateStep)
  
-                    ForEach(Array(missedClasses.enumerated()), id: \.offset) { index, cls in
+                    ForEach(Array(classData.missedClasses.enumerated()), id: \.offset) { index, cls in
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(cls.0)
