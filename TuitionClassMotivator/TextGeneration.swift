@@ -192,7 +192,7 @@ final class AttendanceBinary: NSObject, CLLocationManagerDelegate {
     }
 }
 
-struct ContentView: View {
+/*struct ContentView: View {
     @State private var selectedImage: UIImage?
     @State private var recognizedText: String = ""
     @State private var isPickerPresented = false
@@ -225,7 +225,7 @@ struct ContentView: View {
         }
         .padding()
     }
-}
+}*/
 
 struct PhotoPicker: UIViewControllerRepresentable {
     @Binding var selectedImage: UIImage?
@@ -339,7 +339,8 @@ func detectTextFeatures(in image: UIImage, completion: @escaping (String) -> Voi
         print(cleaned)
         
         parseClassesWithOllama(from: cleaned) {
-            parsedClasses in print(parsedClasses)
+            parsedClasses in print("This is parsed tuple: \(parsedClasses)")
+            ClassStackShare.shared.classSchedule = parsedClasses
         }
         DispatchQueue.main.async {
             completion(cleaned)
@@ -411,7 +412,7 @@ func parseClassesWithOllama(from text: String, completion: @escaping ([(String, 
     Parse this university schedule text. Each class starts with "Enrolled" and may span multiple lines.
 
     Your task: Extract className, credits, startTime, and weekDays for each enrolled class.
-    
+
     Examples from this text:
     - "Enrolled Computer Engineering... TR 3:05pm" → "Computer Engineering 331", weekDays: "TR" (2 days)
     - "Enrolled 12190 Computer 331" → "Computer Engineering 331"
@@ -420,19 +421,24 @@ func parseClassesWithOllama(from text: String, completion: @escaping ([(String, 
     - "Enrolled 2000 Graphic Design 110 3" → "Graphic Design 110" with 3 credits
     - "Enrolled s 30106 Japanese 21 2" → "Japanese 21" with 2 credits
     - "Enrolled 26223 Statistics 319" → "Statistics 319"
-    
+
     Rules for parsing:
     1. className: Subject + course number (e.g., "Computer Science 461", "English 202C")
     2. credits: Look for standalone number 2-4 near the class. If you see "4 More", that means 4 credits.
-    3. startTime: First time in format like "3:05pm" or "11:15am", convert to "3:05 PM" or "11:15 AM"
+    3. **startTime: CRITICAL - Always take the FIRST time in the range, never the second.**
+       - From "3:05pm - 4:20pm" → use "3:05 PM" (NOT 4:20pm)
+       - From "11:15am - 12:05pm" → use "11:15 AM" (NOT 12:05pm)
+       - From "1:25pm - 2:15pm" → use "1:25 PM" (NOT 2:15pm)
+       - The first time is when class STARTS. Ignore the end time completely.
+       - Convert to 12-hour format with space before AM/PM (e.g., "3:05 PM")
     4. weekDays: Extract day codes like "MWF", "TR", "M", "F", etc. Common patterns:
        - M = Monday, T = Tuesday, W = Wednesday, R = Thursday, F = Friday
        - Count each letter as one class per week
     5. Estimate typical credits if not found: 3-credit courses for most, 2 for languages, 4 for labs
-    
+
     The schedule text:
     \(text)
-    
+
     Return ONLY this JSON (no other text):
     {
         "classes": [
@@ -447,7 +453,6 @@ func parseClassesWithOllama(from text: String, completion: @escaping ([(String, 
         "totalCredits": 17
     }
     """
-    
     let url = URL(string: "http://localhost:11434/api/generate")!
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
@@ -520,7 +525,16 @@ func parseClassesWithOllama(from text: String, completion: @escaping ([(String, 
                         return
                     }
                     
-                    let perCreditValue = 60000.0 / Double(parseResponse.totalCredits)
+                    
+                    if ClassStackShare.shared.isInState{
+                        ClassStackShare.shared.semesterTuition = 15000.0
+                    }
+                    else{
+                        ClassStackShare.shared.semesterTuition = 60000.0
+                    }
+                    
+                    let perCreditValue = ClassStackShare.shared.semesterTuition / Double(parseResponse.totalCredits)
+                    print(ClassStackShare.shared.semesterTuition)
                     print("Total Credits: \(parseResponse.totalCredits)")
                     print("Per Credit Value: $\(String(format: "%.2f", perCreditValue))")
                     
@@ -535,7 +549,7 @@ func parseClassesWithOllama(from text: String, completion: @escaping ([(String, 
                         let totalClassValue = perCreditValue * Double(parsedClass.credits)
                         let perClassInstanceValue = totalClassValue / Double(totalClassesInSemester)
                         
-                        let monetaryString = "$\(Int(perClassInstanceValue))"
+                        let monetaryString = "\(Int(perClassInstanceValue))"
                         
                         results.append((
                             parsedClass.className,
@@ -645,6 +659,6 @@ struct ParsedClass: Decodable {
 //    return results
 //}
 
-#Preview {
-    ContentView()
-}
+/*#Preview {
+    PhotoPicker()
+}*/

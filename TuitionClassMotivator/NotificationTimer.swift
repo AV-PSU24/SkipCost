@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 
 /// Global timer manager that periodically checks class times and sends local notifications
 final class NotificationTimer: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
+    var classData = ClassStackShare.shared
     private var timer: Timer?
     
     // MARK: - Init
@@ -33,13 +34,15 @@ final class NotificationTimer: NSObject, ObservableObject, UNUserNotificationCen
         
         //short time format "hh"mm AM/PM"
         let currentTime = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)
-        let attended = true
+        let attended = false
         
         if attended {
+            classData.investmentSum += Double(classCost) ?? 0
             ClassStackShare.shared.attendedClasses.append((className, classCost, currentTime))
             //print("Added to Money Invested: \(className)")
         }
         else {
+            classData.LostSum += Double(classCost) ?? 0
             ClassStackShare.shared.missedClasses.append((className,classCost, currentTime))
             //print("Added to Money Wasted: \(className)")
         }

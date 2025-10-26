@@ -9,11 +9,18 @@ import SwiftUI
 
 struct MoneyWasted: View {
     @State private var animateStep = 0  // tracks animation stage
-    let tuitionLeft = 3200.0
-    let totalTuition = 6000.0
-    let wastedAmount = 2000.0
-    var curSemester = "Fall Semester 2025"
     @ObservedObject var classData = ClassStackShare.shared
+    var totalTuition: Double {
+            return classData.semesterTuition
+        }
+    var wastedAmount: Double {
+        return classData.LostSum
+        }
+    var tuitionLeft: Double {
+        return totalTuition - classData.investmentSum - classData.LostSum
+    }
+    var curSemester = "Fall Semester 2025"
+    
     
     var body: some View {
         ScrollView {
@@ -82,7 +89,7 @@ struct MoneyWasted: View {
                             }
                             Spacer()
                             VStack(alignment: .trailing) {
-                                Text(cls.1)
+                                Text("$\(cls.1)")
                                     .foregroundColor(.red)
                                     .bold()
                                 Text("lost")

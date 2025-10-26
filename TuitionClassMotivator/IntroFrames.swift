@@ -5,9 +5,14 @@ struct IntroFrames: View {
     @State private var currentFrame = 0
     
     // Settings to collect
-    @State private var university = ""
-    @State private var major = ""
-    @State private var isInState = true  // true = in-state, false = out-of-state
+    
+    @StateObject private var classStack = ClassStackShare.shared
+
+    @State private var selectedImage: UIImage?
+    @State private var recognizedText: String = ""
+    @State private var isPickerPresented = false
+    @State private var isLoadingClasses = false
+
     
     let universities = [
             "Penn State",
@@ -73,7 +78,7 @@ struct IntroFrames: View {
                 }
                 .transition(.opacity)
             }
-            else {
+            else if currentFrame == 1 {
                 // FRAME 2: Settings
                 VStack(spacing: 0) {
                     Text("Help Us Understand Your Finances")
@@ -98,13 +103,13 @@ struct IntroFrames: View {
                             Menu {
                                 ForEach(universities, id: \.self) { uni in
                                     Button(uni) {
-                                        university = uni
+                                        classStack.university = uni
                                     }
                                 }
                             } label: {
                                 HStack {
-                                    Text(university.isEmpty ? "Select University" : university)
-                                        .foregroundColor(university.isEmpty ? .gray : .primary)
+                                    Text(classStack.university.isEmpty ? "Select University" : classStack.university)
+                                        .foregroundColor(classStack.university.isEmpty ? .gray : .primary)
                                     Spacer()
                                     Image(systemName: "chevron.down")
                                         .foregroundColor(.gray)
@@ -128,13 +133,13 @@ struct IntroFrames: View {
                             Menu {
                                 ForEach(majors, id: \.self) { maj in
                                     Button(maj) {
-                                        major = maj
+                                        classStack.major = maj
                                     }
                                 }
                             } label: {
                                 HStack {
-                                    Text(major.isEmpty ? "Select Major" : major)
-                                        .foregroundColor(major.isEmpty ? .gray : .primary)
+                                    Text(classStack.major.isEmpty ? "Select Major" : classStack.major)
+                                        .foregroundColor(classStack.major.isEmpty ? .gray : .primary)
                                     Spacer()
                                     Image(systemName: "chevron.down")
                                         .foregroundColor(.gray)
@@ -165,27 +170,27 @@ struct IntroFrames: View {
                                 
                                 // Sliding highlight
                                 HStack {
-                                    if !isInState { Spacer() }
+                                    if !classStack.isInState { Spacer() }
                                     RoundedRectangle(cornerRadius: 25)
                                         .fill(Color.green)
                                         .frame(width: 160, height: 44)
-                                        .animation(.easeInOut(duration: 0.25), value: isInState)
-                                    if isInState { Spacer() }
+                                        .animation(.easeInOut(duration: 0.25), value: classStack.isInState)
+                                    if classStack.isInState { Spacer() }
                                 }
                                 .padding(.horizontal, 3)
                                 
                                 // Labels
                                 HStack {
-                                    Button(action: { withAnimation { isInState = true } }) {
+                                    Button(action: { withAnimation { classStack.isInState = true } }) {
                                         Text("In-State")
                                             .font(.headline)
-                                            .foregroundColor(isInState ? .white : .gray)
+                                            .foregroundColor(classStack.isInState ? .white : .gray)
                                             .frame(maxWidth: .infinity)
                                     }
-                                    Button(action: { withAnimation { isInState = false } }) {
+                                    Button(action: { withAnimation { classStack.isInState = false } }) {
                                         Text("Out-of-State")
                                             .font(.headline)
-                                            .foregroundColor(!isInState ? .white : .gray)
+                                            .foregroundColor(!classStack.isInState ? .white : .gray)
                                             .frame(maxWidth: .infinity)
                                     }
                                 }
@@ -199,12 +204,12 @@ struct IntroFrames: View {
                     Spacer()
                     
                     Button(action: {
-                        saveSettings()
-                        withAnimation {
-                            isCompleted = true
+                        saveBasicSettings()
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            currentFrame = 2
                         }
                     }) {
-                        Text("Get Started")
+                        Text("Next")
                             .font(.headline)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -217,17 +222,110 @@ struct IntroFrames: View {
                 }
                 .transition(.opacity)
             }
-
+            else {
+                // FRAME 3: Upload Schedule
+                VStack(spacing: 20) {
+                    Text("📅")
+                        .font(.system(size: 60))
+                        .padding(.top, 40)
+                    
+                    Text("Upload Your Schedule")
+                        .font(.system(size: 28, weight: .bold))
+                        .multilineTextAlignment(.center)
+                    
+                    if let selectedImage = selectedImage {
+                        Image(uiImage: selectedImage)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 250)
+                            .cornerRadius(12)
+                    }
+                    
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            if classStack.classSchedule.isEmpty {
+                                VStack(spacing: 12) {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                                            .scaleEffect(1.5)
+                                        
+                                        Text("Performing AI Analysis...")
+                                            .foregroundColor(.gray)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                            }
+                            else {
+                                ForEach(classStack.classSchedule.indices, id: \.self) { index in
+                                    let classInfo = classStack.classSchedule[index]
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(classInfo.0) // Class name
+                                            .font(.headline)
+                                        Text("Cost: $\(classInfo.1)") // Cost
+                                            .font(.subheadline)
+                                            .foregroundColor(.gray)
+                                        Text("Time: \(classInfo.2)") // Time
+                                            .font(.subheadline)
+                                            .foregroundColor(.gray)
+                                    }
+                                    .padding(.vertical, 8)
+                                    
+                                    if index < classStack.classSchedule.count - 1 {
+                                        Divider()
+                                    }
+                                }
+                            }
+                        }
+                        .padding()
+                        }
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(8)
+                        .frame(maxHeight: 150)
+                    
+                    Button("Select Schedule Image") {
+                        isPickerPresented = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .sheet(isPresented: $isPickerPresented) {
+                        PhotoPicker(selectedImage: $selectedImage, recognizedText: $recognizedText)
+                    }
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        saveSettings()
+                        withAnimation {
+                            isCompleted = true
+                        }
+                    }) {
+                        Text(classStack.classSchedule.isEmpty ? "Skip for Now" : "Get Started")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(classStack.classSchedule.isEmpty ? Color.gray : Color.green)
+                            .cornerRadius(15)
+                    }
+                    .padding(.horizontal, 40)
+                    .padding(.bottom, 50)
+                }
+                .padding()
+                .transition(.opacity)
+            }
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
     }
     
+    private func saveBasicSettings() {
+        UserDefaults.standard.set(classStack.university, forKey: "university")
+        UserDefaults.standard.set(classStack.major, forKey: "major")
+        UserDefaults.standard.set(classStack.isInState, forKey: "isInState")
+    }
+    
     private func saveSettings() {
-        UserDefaults.standard.set(university, forKey: "university")
-        UserDefaults.standard.set(major, forKey: "major")
-        UserDefaults.standard.set(isInState, forKey: "isInState")
+        saveBasicSettings()
+        UserDefaults.standard.set(recognizedText, forKey: "scheduleText")
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
         
-        print("✅ Saved: \(university), \(major), \(isInState ? "In-State" : "Out-of-State")")
+        print("✅ Saved: \(classStack.university), \(classStack.major), \(classStack.isInState ? "In-State" : "Out-of-State")")
     }
 }
